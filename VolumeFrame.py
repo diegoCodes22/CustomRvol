@@ -9,3 +9,6 @@ class VolumeFrame:
         self.vol_df = ohlcv_dataframe(reqHistoricalDataStream(configurations.CONN_VARS, configurations.contract,
                                                               configurations.period, configurations.bar_size,
                                                               configurations.end_date))
+        morning_filter = self.vol_df['date'].str.contains(r".\s09:30:00", regex=True)
+        self.purged = self.vol_df.loc[morning_filter]
+        self.avg_vol = int(self.purged['volume'].mean())

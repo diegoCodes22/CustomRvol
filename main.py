@@ -1,10 +1,14 @@
 from VolumeFrame import VolumeFrame
-from Config import Config
 
 
-configs = Config(symbol="SPY")
-vf = VolumeFrame(configs)
+vf = VolumeFrame(symbol="SPY")
 
-print(vf.purged)
+
+def entry_algorithm():
+    if vf.purged["volume"].iloc[-1] > vf.avg_vol:
+        print("2")
+
+
+
 print(vf.avg_vol)
 

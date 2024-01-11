@@ -51,7 +51,7 @@ class LiveData(EClient, EWrapper):
         self.reqMktData(orderId, self.frame.contract, "", False, False, [])
 
     def tickPrice(self, reqId: TickerId, tickType: TickType, price: float, attrib: TickAttrib):
-        ct = datetime.now(timezone("UTC-5")).strftime("%H%M%S")
+        ct = datetime.now(timezone("US/Eastern")).strftime("%H%M%S")
         self.frame.pnl = self.frame.entry - price if self.frame.direction == -1 else price - self.frame.entry
         if price == self.frame.take_profit or self.frame.stop_loss or ct == "15:30:00":
             order = make_order(self.frame.opt_contract, "SELL", self.frame.CONN_VARS)
@@ -61,9 +61,11 @@ class LiveData(EClient, EWrapper):
             print(self.frame.pnl)
 
 
+
+
 if __name__ == "__main__":
     vf = VolumeFrame(symbol="SPY")
-    current_time = datetime.now(timezone("UTC-5")).strftime("%Y%m%d %H%M%S")
+    current_time = datetime.now(timezone("US/Eastern")).strftime("%Y%m%d %H%M%S")
     if current_time.split(" ")[1] == "09:30:00":
         entry_algorithm(vf, current_time)
         if vf.in_position == 0:

@@ -11,7 +11,10 @@ class Position:
         self.atr: float = 0
 
         self.in_position: bool = False
+        self.underlying_entry_price: float = 0
+        self.underlying_exit_price: float = 0
         self.entry: float = 0
+        self.exit: float = 0
         self.direction: int = 0
         self.expiration: str = ""
         self.strike: int = 0
@@ -19,12 +22,15 @@ class Position:
         self.take_profit: float = 0
         self.stop_loss: float = 0
 
-        if self.direction == 1:
-            self.take_profit = self.entry + self.atr
-            self.stop_loss = self.eb_low
-        elif self.direction == -1:
-            self.take_profit = self.entry - self.atr
-            self.stop_loss = self.eb_high
-
         self.opt_contract: Contract = Contract()
         self.pnl: float = 0
+        self.pnl_perc: float = 0
+        self.u_chg: float = 0
+
+    def calculate_bracket(self):
+        if self.direction == 1:
+            self.take_profit = self.underlying_entry_price + self.atr
+            self.stop_loss = self.eb_low
+        elif self.direction == -1:
+            self.take_profit = self.underlying_entry_price - self.atr
+            self.stop_loss = self.eb_high

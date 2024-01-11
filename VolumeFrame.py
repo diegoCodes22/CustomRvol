@@ -10,9 +10,10 @@ class VolumeFrame(Config, Position):
         super().__init__(**kwargs)
         self.vol_df = ohlcv_dataframe(reqHistoricalDataStream(self.CONN_VARS, self.contract, self.period, self.bar_size,
                                                               self.end_date))
+        self.vol_df = self.vol_df.dropna()
         morning_filter = self.vol_df['date'].str.contains(r".\s09:30:00", regex=True)
         self.purged = self.vol_df.loc[morning_filter]
-        self.avg_vol = int(self.purged['volume'].mean())
+        self.avg_vol = round(self.purged['volume'].mean())
 
         self.vol_df['atr'] = AverageTrueRange(self.vol_df['high'], self.vol_df['low'],
                                               self.vol_df['close']).average_true_range()
@@ -22,4 +23,10 @@ class VolumeFrame(Config, Position):
         self.close = self.purged['close'].iloc[-1]
         self.open = self.purged['open'].iloc[-1]
         self.volume = self.purged['volume'].iloc[1]
-        self.atr = self.purged['atr'].iloc[-1]
+        self.atr = self.vol_df['atr'].iloc[-1]
+
+    def calculate_pnl(self):
+        self.pnl = (self.exit - self.entry) * 100
+        self.pnl_perc = (self.pnl / self.entry) * 100
+        print(f"{self.symbol} move from {self.underlying_entry_price} -> {self.underlying_exit_price}\n"
+              f"trade direction {self.direction} yielded a profit or loss of {self.pnl}$ or {self.pnl_perc}%")

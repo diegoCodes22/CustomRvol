@@ -1,5 +1,6 @@
 from TWSIBAPI_MODULES.Dataframes import ohlcv_dataframe
 from TWSIBAPI_MODULES.DataStreams import reqHistoricalDataStream
+from TWSIBAPI_MODULES import NoSecDef
 from Config import Config
 from ta.volatility import AverageTrueRange
 from Position import Position
@@ -8,8 +9,15 @@ from Position import Position
 class VolumeFrame(Config, Position):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.vol_df = ohlcv_dataframe(reqHistoricalDataStream(self.CONN_VARS, self.contract, self.period, self.bar_size,
-                                                              self.end_date))
+        try:
+            hds = reqHistoricalDataStream(self.CONN_VARS, self.contract, self.period, self.bar_size, self.end_date)
+        except NoSecDef:
+            exit(-1)
+        if len(hds) == 0:
+            print("Could not retrieve historical data.")
+            print(f"{self.CONN_VARS}---{self.contract}--period: {self.period}--bar size: {self.bar_size}--end date: {self.end_date}\nExiting...")
+            exit(-1)
+        self.vol_df = ohlcv_dataframe(hds)
         self.vol_df = self.vol_df.dropna()
         morning_filter = self.vol_df['date'].str.contains(r".\s09:30:00", regex=True)
         self.purged = self.vol_df.loc[morning_filter]
@@ -24,6 +32,14 @@ class VolumeFrame(Config, Position):
         self.open = self.purged['open'].iloc[-1]
         self.volume = self.purged['volume'].iloc[1]
         self.atr = self.vol_df['atr'].iloc[-1]
+
+    def calculate_bracket(self):
+        if self.direction == 1:
+            self.take_profit = round(self.underlying_entry_price + self.atr, 2)
+            self.stop_loss = self.eb_low
+        elif self.direction == -1:
+            self.take_profit = round(self.underlying_entry_price - self.atr, 2)
+            self.stop_loss = self.eb_high
 
     def calculate_pnl(self):
         self.pnl = (self.exit - self.entry) * 100

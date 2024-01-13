@@ -2,25 +2,32 @@ from typing import List
 from TWSIBAPI_MODULES.Contracts import stock
 
 
+class NoSym(Exception):
+    def __init__(self):
+        self.exit_code = -2
+        print("No symbol was provided")
+        exit(self.exit_code)
+
+
+class InvalidPeriod(Exception):
+    def __init__(self, valid_periods: List[str]):
+        self.exit_code = -3
+        print(f"Invalid period suffix, options are {valid_periods}")
+        exit(self.exit_code)
+
+
 class Config:
     def __init__(self, CONN_VARS: List[str] = None, symbol: str = None, period: str = "2 M", end_date: str = "",
                  bar_size: str = "30 mins"):
         if CONN_VARS is None:
             self.CONN_VARS = ["127.0.0.1", 7497, 0]
         if symbol is None:
-            print("No symbol was provided")
-            exit(-1)
+            raise NoSym
         self.symbol = symbol.upper()
-        try:
-            self.contract = stock(symbol)
-        except Exception:  # This exception should not be handled like this, instead it should be handled by the
-            # TWSIBAPI_MODULES package
-            print("Error retrieving symbol contract")
-            exit(-1)
+        self.contract = stock(symbol)
         valid_periods = ['S', 'D', 'W', 'M', 'Y']
         if period.split(" ")[1] not in valid_periods:
-            print(f"Invalid period suffix, options are {valid_periods}")
-            exit(-1)
+            raise InvalidPeriod(valid_periods)
         self.period = period
         self.end_date = end_date  # Check end_date format
         self.bar_size = bar_size

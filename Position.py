@@ -26,11 +26,3 @@ class Position:
         self.pnl: float = 0
         self.pnl_perc: float = 0
         self.u_chg: float = 0
-
-    def calculate_bracket(self):
-        if self.direction == 1:
-            self.take_profit = self.underlying_entry_price + self.atr
-            self.stop_loss = self.eb_low
-        elif self.direction == -1:
-            self.take_profit = self.underlying_entry_price - self.atr
-            self.stop_loss = self.eb_high

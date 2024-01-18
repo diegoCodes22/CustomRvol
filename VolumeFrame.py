@@ -10,12 +10,12 @@ class VolumeFrame(Config, Position):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         try:
-            hds = reqHistoricalDataStream(self.CONN_VARS, self.contract, self.period, self.bar_size, self.end_date)
+            hds = reqHistoricalDataStream(self.CONN_VARS, self.contract, self.duration, self.bar_size, self.end_date)
         except NoSecDef:
             exit(-1)
         if len(hds) == 0:
             print("Could not retrieve historical data.")
-            print(f"{self.CONN_VARS}---{self.contract}--period: {self.period}--bar size: {self.bar_size}--end date: {self.end_date}\nExiting...")
+            print(f"{self.CONN_VARS}---{self.contract}--duration: {self.duration}--bar size: {self.bar_size}--end date: {self.end_date}\nExiting...")
             exit(-1)
         self.vol_df = ohlcv_dataframe(hds)
         self.vol_df = self.vol_df.dropna()
@@ -42,7 +42,7 @@ class VolumeFrame(Config, Position):
             self.stop_loss = self.eb_high
 
     def calculate_pnl(self):
-        self.pnl = (self.exit - self.entry) * 100
-        self.pnl_perc = (self.pnl / self.entry) * 100
+        self.pnl = round((self.exit - self.entry) * 100, 1)
+        self.pnl_perc = round(self.pnl / self.entry, 1)
         print(f"{self.symbol} move from {self.underlying_entry_price} -> {self.underlying_exit_price}\n"
               f"trade direction {self.direction} yielded a profit or loss of {self.pnl}$ or {self.pnl_perc}%")

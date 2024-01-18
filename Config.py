@@ -17,7 +17,7 @@ class InvalidPeriod(Exception):
 
 
 class Config:
-    def __init__(self, CONN_VARS: List[str] = None, symbol: str = None, period: str = "2 M", end_date: str = "",
+    def __init__(self, CONN_VARS: List[str] = None, symbol: str = None, duration: str = "2 M", end_date: str = "",
                  bar_size: str = "30 mins"):
         if CONN_VARS is None:
             self.CONN_VARS = ["127.0.0.1", 7497, 0]
@@ -26,8 +26,8 @@ class Config:
         self.symbol = symbol.upper()
         self.contract = stock(symbol)
         valid_periods = ['S', 'D', 'W', 'M', 'Y']
-        if period.split(" ")[1] not in valid_periods:
+        if duration.split(" ")[1] not in valid_periods:
             raise InvalidPeriod(valid_periods)
-        self.period = period
+        self.duration = duration
         self.end_date = end_date  # Check end_date format
         self.bar_size = bar_size

@@ -21,6 +21,8 @@ class Config:
                  bar_size: str = "30 mins"):
         if CONN_VARS is None:
             self.CONN_VARS = ["127.0.0.1", 7497, 0]
+        else:
+            self.CONN_VARS = CONN_VARS
         if symbol is None:
             raise NoSym
         self.symbol = symbol.upper()

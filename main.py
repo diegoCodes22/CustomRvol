@@ -11,6 +11,7 @@ from TWSIBAPI_MODULES.Orders import place_order
 from TWSIBAPI_MODULES import NoSecDef, ConnError
 
 from VolumeFrame import VolumeFrame
+from Position import Position
 
 from datetime import datetime, timedelta
 from time import sleep
@@ -18,17 +19,21 @@ from pytz import timezone
 
 
 # 2.38s on avg until entry
+# Creating frame and running entry algo
 
-# Some functions should be slightly different depending on the security traded, like order, or the entry algo
-# I have to keep adding live data to the dataframe, so it can continue to take trade, or after it takes the trade, and
-# wants to scan for new ones, it requests historical data again, but I think that is not efficient.
-# Make it so you can use a trailing stop.
+# Add data to df after trade
+# Must calculate the amount of bars passed, and I must update after every bar.
+# 0.4243 to reqHistData for 2 bars
 
-# Decide exactly what time the program should run
 # Log commissions
-# Keep track of all data in a database
+# Keep track of all trades in a database
 
 # Cancel order after duration of time or price movement   ! Complex ! Important !
+# I will need to start a new thread, to monitor price and time
+
+# Some functions should be slightly different depending on the security traded, like order, or the entry algo
+
+# Make it so you can use a trailing stop.
 
 
 def make_order(lmt_price: float, act) -> Order:
@@ -43,22 +48,23 @@ def make_order(lmt_price: float, act) -> Order:
     return order
 
 
-def entry_algorithm(frame: VolumeFrame) -> None:
+def entry_algorithm(frame: VolumeFrame) -> Position:
+    pos = Position(frame)
     ct: str = datetime.now(timezone("US/Eastern")).strftime("%Y%m%d %H%M%S")
     delta: int = 1
-    diff: float = frame.close - frame.open
-    frame.direction = 1 if diff > 0 else -1
-    # if frame.volume > frame.avg_vol and abs(diff) > frame.atr and not frame.in_position:
+    diff: float = pos.close - pos.open
+    pos.direction = 1 if diff > 0 else -1
+    # if pos.volume > frame.avg_vol and abs(diff) > pos.atr and not pos.in_position:
     # ---PSEUDO TESTING ONLY-------|
-    if frame.direction != 0:  # .  |
+    if pos.direction != 0:  # .  |
         # -------------------------|
-        strike_calc = frame.atr + frame.atr / 4
-        frame.strike = round(frame.close + strike_calc) if frame.direction == 1 else round(frame.close - strike_calc)
+        strike_calc = pos.atr + pos.atr / 4
+        pos.strike = round(pos.close + strike_calc) if pos.direction == 1 else round(pos.close - strike_calc)
         while True:
-            frame.expiration = (datetime.strptime(ct.split(" ")[0], "%Y%m%d") + timedelta(days=delta)).strftime("%Y%m%d")
-            frame.opt_contract = option(frame.symbol, frame.expiration, frame.strike, 'C' if frame.direction > 0 else 'P')
+            pos.expiration = (datetime.strptime(ct.split(" ")[0], "%Y%m%d") + timedelta(days=delta)).strftime("%Y%m%d")
+            pos.opt_contract = option(pos.symbol, pos.expiration, pos.strike, 'C' if pos.direction > 0 else 'P')
             try:
-                lmt_price = reqCurrentPrice(frame.CONN_VARS, frame.opt_contract)
+                lmt_price = reqCurrentPrice(frame.CONN_VARS, pos.opt_contract)
             except NoSecDef:
                 delta += 1
                 if delta > 7:
@@ -68,31 +74,33 @@ def entry_algorithm(frame: VolumeFrame) -> None:
             order = make_order(lmt_price, "BUY")
             order.algoStrategy = 'Adaptive'
             order.algoParams = [TagValue('adaptivePriority', 'Normal')]
-            order_details = place_order(frame.CONN_VARS, frame.opt_contract, order)
-            frame.entry = order_details[0]
-            frame.commission += order_details[1]
+            order_details = place_order(frame.CONN_VARS, pos.opt_contract, order)
+            pos.entry = order_details[0]
+            pos.commission += order_details[1]
             break
-        frame.underlying_entry_price = reqCurrentPrice(frame.CONN_VARS, frame.contract)
-        frame.in_position = True
+        pos.underlying_entry_price = reqCurrentPrice(frame.CONN_VARS, frame.contract)
+        pos.in_position = True
     else:
-        frame.in_position = False
+        pos.in_position = False
+    return pos
 
 
-def exit_algorithm(frame: VolumeFrame):
-    lmt_price = reqCurrentPrice(frame.CONN_VARS, frame.opt_contract)
+def exit_algorithm(frame: VolumeFrame, pos: Position):
+    lmt_price = reqCurrentPrice(frame.CONN_VARS, pos.opt_contract)
     order = make_order(lmt_price, "SELL")
     order.algoStrategy = 'Adaptive'
     order.algoParams = [TagValue("adaptivePriority", 'Urgent')]
-    order_details = place_order(frame.CONN_VARS, frame.opt_contract, order)
-    frame.exit = order_details[0]
-    frame.commission += order_details[1]
-    frame.in_position = False
+    order_details = place_order(frame.CONN_VARS, pos.opt_contract, order)
+    pos.exit = order_details[0]
+    pos.commission += order_details[1]
+    pos.in_position = False
 
 
 class LiveData(EClient, EWrapper):
-    def __init__(self, frame: VolumeFrame):
+    def __init__(self, frame: VolumeFrame, pos: Position):
         EClient.__init__(self, self)
         self.frame = frame
+        self.pos = pos
 
     def nextValidId(self, orderId: int):
         self.reqMarketDataType(2)
@@ -102,15 +110,15 @@ class LiveData(EClient, EWrapper):
         ct = datetime.now(timezone("US/Eastern")).strftime("%H:%M")
 
         # --------------------- PSEUDO TESTING ONLY -----------------------------------|
-        self.frame.take_profit = round(self.frame.underlying_entry_price - 0.03, 2)  # |
-        self.frame.stop_loss = round(self.frame.underlying_entry_price + 0.03, 2)    # |
+        self.pos.take_profit = round(self.pos.underlying_entry_price - 0.03, 2)  # |
+        self.pos.stop_loss = round(self.pos.underlying_entry_price + 0.03, 2)  # |
         # -----------------------------------------------------------------------------|
 
-        if price == self.frame.take_profit or price == self.frame.stop_loss or ct == "15:30":
-            self.frame.underlying_exit_price = price
+        if price == self.pos.take_profit or price == self.pos.stop_loss or ct == "15:30":
+            self.pos.underlying_exit_price = price
             self.disconnect()
         else:
-            print(f"{price}  ----  tp {self.frame.take_profit}   sl {self.frame.stop_loss}")
+            print(f"{price}  ----  tp {self.pos.take_profit}   sl {self.pos.stop_loss}")
             sleep(1)
 
     def error(self, reqId: TickerId, errorCode: int, errorString: str):
@@ -122,13 +130,13 @@ class LiveData(EClient, EWrapper):
 
 if __name__ == "__main__":
     vf = VolumeFrame(symbol="SPY")
-    entry_algorithm(vf)
-    if vf.in_position is False:
+    position = entry_algorithm(vf)
+    if position.in_position is False:
         print("No trade was taken, Exiting...")
         exit(0)
-    vf.calculate_bracket()
-    lv = LiveData(vf)
+    position.calculate_bracket()
+    lv = LiveData(vf, position)
     lv.connect(vf.CONN_VARS[0], vf.CONN_VARS[1], vf.CONN_VARS[2])
     lv.run()
-    exit_algorithm(vf)
-    vf.calculate_pnl()
+    exit_algorithm(vf, position)
+    position.calculate_pnl()

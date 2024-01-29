@@ -1,14 +1,16 @@
 from ibapi.contract import Contract
+from VolumeFrame import VolumeFrame
 
 
 class Position:
-    def __init__(self):
-        self.close: float = 0.
-        self.open: float = 0.
-        self.eb_low: float = 0.
-        self.eb_high: float = 0.
-        self.volume: int = 0
-        self.atr: float = 0.
+    def __init__(self, vf: VolumeFrame):
+        self.symbol = vf.symbol
+        self.open = vf.vol_df['open'].iloc[-1]
+        self.high = vf.vol_df['high'].iloc[-1]
+        self.low = vf.vol_df['low'].iloc[-1]
+        self.close = vf.vol_df['close'].iloc[-1]
+        self.volume = vf.vol_df['volume'].iloc[1]
+        self.atr = vf.vol_df['atr'].iloc[-1]
 
         self.in_position: bool = False
         self.underlying_entry_price: float = 0.
@@ -27,3 +29,17 @@ class Position:
         self.pnl: float = 0.
         self.pnl_perc: float = 0.
         self.u_chg: float = 0.
+
+    def calculate_bracket(self):
+        if self.direction == 1:
+            self.take_profit = round(self.underlying_entry_price + self.atr, 2)
+            self.stop_loss = self.low
+        elif self.direction == -1:
+            self.take_profit = round(self.underlying_entry_price - self.atr, 2)
+            self.stop_loss = self.high
+
+    def calculate_pnl(self):
+        self.pnl = round(((self.exit - self.entry) * 100) - self.commission, 1)
+        self.pnl_perc = round(self.pnl / self.entry, 1)
+        print(f"{self.symbol} move from {self.underlying_entry_price} -> {self.underlying_exit_price}\n"
+              f"trade direction {self.direction} yielded a profit or loss of {self.pnl}$ or {self.pnl_perc}%")

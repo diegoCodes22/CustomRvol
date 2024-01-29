@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/CustomRvol.iml" filepath="$PROJECT_DIR$/.idea/CustomRvol.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../TheDipper/.idea/TheDipper.iml" filepath="$PROJECT_DIR$/../TheDipper/.idea/TheDipper.iml" />
       <module fileurl="file://$PROJECT_DIR$/../twsapimoduleslibrarybase/.idea/twsapimoduleslibrarybase.iml" filepath="$PROJECT_DIR$/../twsapimoduleslibrarybase/.idea/twsapimoduleslibrarybase.iml" />
     </modules>
   </component>

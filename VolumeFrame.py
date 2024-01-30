@@ -4,8 +4,6 @@ from TWSIBAPI_MODULES import NoSecDef
 from Config import Config
 from pandas_ta.volatility import atr
 
-# from ta.volatility import AverageTrueRange  Uninstall--
-
 
 class VolumeFrame(Config):
     def __init__(self, **kwargs):

@@ -4,6 +4,9 @@ from ibapi.ticktype import TickType
 from ibapi.order import Order
 from ibapi.client import EClient
 from ibapi.wrapper import EWrapper
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 
 from TWSIBAPI_MODULES.Contracts import option
 from TWSIBAPI_MODULES.DataStreams import reqCurrentPrice
@@ -18,15 +21,10 @@ from time import sleep
 from pytz import timezone
 
 
-# 2.38s on avg until entry
-# Creating frame and running entry algo
+# Test database
 
-# Add data to df after trade
 # Must calculate the amount of bars passed, and I must update after every bar.
 # 0.4243 to reqHistData for 2 bars
-
-# Log commissions
-# Keep track of all trades in a database
 
 # Cancel order after duration of time or price movement   ! Complex ! Important !
 # I will need to start a new thread, to monitor price and time
@@ -35,8 +33,10 @@ from pytz import timezone
 
 # Make it so you can use a trailing stop.
 
+# 2.38s on avg until entry
+# Creating frame and running entry algo
 
-def make_order(lmt_price: float, act) -> Order:
+def make_order(lmt_price: float, act: str, size: int) -> Order:
     order = Order()
     order.orderId = 0
     order.action = act
@@ -50,7 +50,7 @@ def make_order(lmt_price: float, act) -> Order:
 
 def entry_algorithm(frame: VolumeFrame) -> Position:
     pos = Position(frame)
-    ct: str = datetime.now(timezone("US/Eastern")).strftime("%Y%m%d %H%M%S")
+    pos.trade_date = datetime.now(timezone("US/Eastern")).strftime("%Y%m%d")
     delta: int = 1
     diff: float = pos.close - pos.open
     pos.direction = 1 if diff > 0 else -1
@@ -61,7 +61,7 @@ def entry_algorithm(frame: VolumeFrame) -> Position:
         strike_calc = pos.atr + pos.atr / 4
         pos.strike = round(pos.close + strike_calc) if pos.direction == 1 else round(pos.close - strike_calc)
         while True:
-            pos.expiration = (datetime.strptime(ct.split(" ")[0], "%Y%m%d") + timedelta(days=delta)).strftime("%Y%m%d")
+            pos.expiration = (datetime.strptime(pos.trade_date, "%Y%m%d") + timedelta(days=delta)).strftime("%Y%m%d")
             pos.opt_contract = option(pos.symbol, pos.expiration, pos.strike, 'C' if pos.direction > 0 else 'P')
             try:
                 lmt_price = reqCurrentPrice(frame.CONN_VARS, pos.opt_contract)
@@ -71,13 +71,14 @@ def entry_algorithm(frame: VolumeFrame) -> Position:
                     print("Could not find short term contract.")
                     raise
                 continue
-            order = make_order(lmt_price, "BUY")
+            order = make_order(lmt_price, "BUY", frame.multiplier)
             order.algoStrategy = 'Adaptive'
             order.algoParams = [TagValue('adaptivePriority', 'Normal')]
             order_details = place_order(frame.CONN_VARS, pos.opt_contract, order)
             pos.entry = order_details[0]
             pos.commission += order_details[1]
             break
+        pos.entry_time = datetime.now(timezone("US/Eastern"))
         pos.underlying_entry_price = reqCurrentPrice(frame.CONN_VARS, frame.contract)
         pos.in_position = True
     else:
@@ -87,11 +88,12 @@ def entry_algorithm(frame: VolumeFrame) -> Position:
 
 def exit_algorithm(frame: VolumeFrame, pos: Position):
     lmt_price = reqCurrentPrice(frame.CONN_VARS, pos.opt_contract)
-    order = make_order(lmt_price, "SELL")
+    order = make_order(lmt_price, "SELL", frame.multiplier)
     order.algoStrategy = 'Adaptive'
     order.algoParams = [TagValue("adaptivePriority", 'Urgent')]
     order_details = place_order(frame.CONN_VARS, pos.opt_contract, order)
     pos.exit = order_details[0]
+    pos.exit_time = datetime.now(timezone("US/Eastern"))
     pos.commission += order_details[1]
     pos.in_position = False
 
@@ -140,3 +142,9 @@ if __name__ == "__main__":
     lv.run()
     exit_algorithm(vf, position)
     position.calculate_pnl()
+
+    engine = create_engine(f"sqlite:///{vf.db_path}")
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    session.add(position)
+    session.commit()

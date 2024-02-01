@@ -23,6 +23,8 @@ from pytz import timezone
 
 # Test database
 
+# Sectype error, since I always pass a stock ticker, sectype is always stk
+
 # Must calculate the amount of bars passed, and I must update after every bar.
 # 0.4243 to reqHistData for 2 bars
 
@@ -40,7 +42,7 @@ def make_order(lmt_price: float, act: str, size: int) -> Order:
     order = Order()
     order.orderId = 0
     order.action = act
-    order.totalQuantity = 1
+    order.totalQuantity = size
     order.orderType = "LMT"
     order.lmtPrice = lmt_price
     order.eTradeOnly = ''
@@ -56,7 +58,7 @@ def entry_algorithm(frame: VolumeFrame) -> Position:
     pos.direction = 1 if diff > 0 else -1
     # if pos.volume > frame.avg_vol and abs(diff) > pos.atr and not pos.in_position:
     # ---PSEUDO TESTING ONLY-------|
-    if pos.direction != 0:  # .  |
+    if pos.direction != 0:  # .    |
         # -------------------------|
         strike_calc = pos.atr + pos.atr / 4
         pos.strike = round(pos.close + strike_calc) if pos.direction == 1 else round(pos.close - strike_calc)
@@ -141,7 +143,6 @@ if __name__ == "__main__":
     lv.connect(vf.CONN_VARS[0], vf.CONN_VARS[1], vf.CONN_VARS[2])
     lv.run()
     exit_algorithm(vf, position)
-    position.calculate_pnl()
 
     engine = create_engine(f"sqlite:///{vf.db_path}")
     Session = sessionmaker(bind=engine)

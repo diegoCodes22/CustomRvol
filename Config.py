@@ -27,7 +27,6 @@ class Config:
             raise NoSym
         self.symbol = symbol.upper()
         self.contract = stock(symbol)
-        self.sec_type = self.contract.secType
         self.multiplier = multiplier
         valid_periods = ['S', 'D', 'W', 'M', 'Y']
         if duration.split(" ")[1] not in valid_periods:

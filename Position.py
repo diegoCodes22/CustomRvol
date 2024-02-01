@@ -1,17 +1,14 @@
 from ibapi.contract import Contract
 from VolumeFrame import VolumeFrame
-from sqlalchemy import Column, Integer, String, Float, create_engine
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy.orm import declarative_base
 
 
 Base = declarative_base()
 
-def init_engine():
-    engine = create_engine("sqlite://")
-
 
 class Position(Base):
-    __tablename__ = "TradeLog"
+    __tablename__ = "trade_log"
 
     tid = Column("tid", Integer, primary_key=True)
     Symbol = Column("Symbol", String)
@@ -32,7 +29,7 @@ class Position(Base):
 
     def __init__(self, vf: VolumeFrame):
         self.symbol: str = vf.symbol
-        self.sec_type: str = vf.sec_type
+        self.sec_type: str = "OPT"
         self.multiplier: int = vf.multiplier
         self.trade_date: str = ""
 
@@ -51,6 +48,8 @@ class Position(Base):
         self.u_chg: float = 0.
         self.time_in_trade = None
 
+        self.trade_size: float = 0.
+
         # --
         self.open = vf.vol_df['open'].iloc[-1]
         self.high = vf.vol_df['high'].iloc[-1]
@@ -68,21 +67,32 @@ class Position(Base):
         self.strike: int = 0
 
     def define_columns(self):
+        self.trade_size = round(self.entry * self.multiplier * 100, 1)
+        self.u_chg = round(
+            (abs(self.underlying_entry_price - self.underlying_exit_price) / self.underlying_entry_price) * 100, 1)
+
+        self.time_in_trade = (self.exit_time - self.entry_time).total_seconds() / 60
+        self.entry_time = self.entry_time.strftime("%H:%M:%S")
+        self.exit_time = self.exit_time.strftime("%H:%M:%S")
+
+        self.pnl = round(((self.exit - self.entry) * 100) - self.commission, 1)
+        self.pnl_perc = round(self.pnl / self.entry, 1)
+
         self.Symbol = self.symbol
         self.SecType = self.sec_type
         self.TradeDate = self.trade_date
-        self.TradeSize = self.entry * self.multiplier * 100
+        self.TradeSize = self.trade_size
         self.Direction = self.direction
         self.RiskReward = self.risk_reward
         self.Entry = self.entry
-        self.EntryTime = self.entry_time.strftime("%H:%M:%S")
+        self.EntryTime = self.entry_time
         self.Exit = self.exit
-        self.ExitTime = self.exit_time.strftime("%H:%M:%S")
+        self.ExitTime = self.exit_time
         self.Commission = self.commission
         self.Pnl = self.pnl
         self.PnlPerc = self.pnl_perc
-        self.TimeInTrade = self.time_in_trade.total_seconds() / 60
-        self.U_Chg = abs(self.underlying_exit_price - self.underlying_entry_price)
+        self.TimeInTrade = self.time_in_trade
+        self.U_Chg = self.u_chg
 
     def calculate_bracket(self):
         if self.direction == 1:
@@ -91,12 +101,12 @@ class Position(Base):
         elif self.direction == -1:
             self.take_profit = round(self.underlying_entry_price - self.atr, 2)
             self.stop_loss = self.high
-        self.risk_reward = abs(self.take_profit - self.underlying_entry_price) / abs(self.stop_loss - self.underlying_entry_price)
+        self.risk_reward = round(abs(self.take_profit - self.underlying_entry_price) /
+                                 abs(self.stop_loss - self.underlying_entry_price), 2)
 
-    def calculate_pnl(self):
-        self.pnl = round(((self.exit - self.entry) * 100) - self.commission, 1)
-        self.pnl_perc = round(self.pnl / self.entry, 1)
-        print(f"{self.symbol} move from {self.underlying_entry_price} -> {self.underlying_exit_price}\n"
-              f"trade direction {self.direction} yielded a profit or loss of {self.pnl}$ or {self.pnl_perc}%")
-        self.u_chg = (abs(self.underlying_entry_price - self.underlying_exit_price) / self.underlying_entry_price) * 100
-        self.time_in_trade = self.exit_time - self.entry_time
+    def __repr__(self):
+        return f"{self.symbol}, {self.sec_type}, {self.trade_date}\n" \
+               f"size: {self.trade_size}, RR: {self.risk_reward}, direction: {self.direction}\n" \
+               f"pnl: {self.pnl}, pnl%: {self.pnl_perc}, time in trade: {self.time_in_trade}\n" \
+               f"entry: {self.entry}, entry time: {self.entry_time}, exit: {self.exit}, exit time: {self.exit_time}\n" \
+               f"commission: {self.commission}, underlying change: {self.u_chg}"

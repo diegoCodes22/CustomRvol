@@ -7,11 +7,10 @@ from ibapi.wrapper import EWrapper
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-
 from TWSIBAPI_MODULES.Contracts import option
 from TWSIBAPI_MODULES.DataStreams import reqCurrentPrice
 from TWSIBAPI_MODULES.Orders import place_order
-from TWSIBAPI_MODULES import NoSecDef, ConnError
+from TWSIBAPI_MODULES.exceptions_handler import exceptions_factory, NoSecDef
 
 from VolumeFrame import VolumeFrame
 from Position import Position
@@ -21,19 +20,11 @@ from time import sleep
 from pytz import timezone
 
 
-# Test database
-
-# Sectype error, since I always pass a stock ticker, sectype is always stk
-
 # Must calculate the amount of bars passed, and I must update after every bar.
 # 0.4243 to reqHistData for 2 bars
 
-# Cancel order after duration of time or price movement   ! Complex ! Important !
-# I will need to start a new thread, to monitor price and time
-
-# Some functions should be slightly different depending on the security traded, like order, or the entry algo
-
 # Make it so you can use a trailing stop.
+# Option to add a trend filter
 
 # 2.38s on avg until entry
 # Creating frame and running entry algo
@@ -126,10 +117,7 @@ class LiveData(EClient, EWrapper):
             sleep(1)
 
     def error(self, reqId: TickerId, errorCode: int, errorString: str):
-        if errorCode == 502:
-            raise ConnError
-        elif errorCode == 200:
-            raise NoSecDef
+        exceptions_factory(errorCode)
 
 
 if __name__ == "__main__":

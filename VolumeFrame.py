@@ -1,6 +1,5 @@
 from TWSIBAPI_MODULES.Dataframes import ohlcv_dataframe
 from TWSIBAPI_MODULES.DataStreams import reqHistoricalDataStream
-from TWSIBAPI_MODULES import NoSecDef
 from Config import Config
 from pandas_ta.volatility import atr
 
@@ -8,10 +7,7 @@ from pandas_ta.volatility import atr
 class VolumeFrame(Config):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        try:
-            hds = reqHistoricalDataStream(self.CONN_VARS, self.contract, self.duration, self.bar_size, self.end_date)
-        except NoSecDef:
-            exit(-1)
+        hds = reqHistoricalDataStream(self.CONN_VARS, self.contract, self.duration, self.bar_size, self.end_date)
         if len(hds) == 0:
             print("Could not retrieve historical data.")  # Historical data exception
             print(f"{self.CONN_VARS}---{self.contract}--duration: {self.duration}--bar size: {self.bar_size}--end date: {self.end_date}\nExiting...")

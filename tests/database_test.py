@@ -2,9 +2,8 @@ from Position import Position
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from VolumeFrame import VolumeFrame
-from datetime import datetime, timedelta
+from datetime import datetime
 from pytz import timezone
-from TWSIBAPI_MODULES.Contracts import option
 from time import sleep
 
 
@@ -14,9 +13,6 @@ pos = Position(vf)
 pos.trade_date = datetime.now(timezone("US/Eastern")).strftime("%Y%m%d")
 diff = pos.close - pos.open
 pos.direction = 1 if diff > 0 else -1
-pos.strike = pos.close
-pos.expiration = (datetime.strptime(pos.trade_date, "%Y%m%d") + timedelta(days=1)).strftime("%Y%m%d")
-pos.opt_contract = option(pos.symbol, pos.expiration, pos.strike, 'C' if pos.direction > 0 else 'P')
 pos.entry = pos.close / 100
 pos.entry_time = datetime.now(timezone("US/Eastern"))
 pos.underlying_entry_price = pos.close

@@ -10,7 +10,7 @@ Base = declarative_base()
 class Position(Base):
     __tablename__ = "trade_log"
 
-    tid = Column("tid", Integer, primary_key=True)
+    Tid = Column("tid", Integer, primary_key=True, autoincrement=True)
     Symbol = Column("Symbol", String)
     SecType = Column("SecType", String)
     TradeDate = Column("TradeDate", String)
@@ -110,3 +110,12 @@ class Position(Base):
                f"pnl: {self.pnl}, pnl%: {self.pnl_perc}, time in trade: {self.time_in_trade}\n" \
                f"entry: {self.entry}, entry time: {self.entry_time}, exit: {self.exit}, exit time: {self.exit_time}\n" \
                f"commission: {self.commission}, underlying change: {self.u_chg}"
+
+    def __eq__(self, other):
+        if isinstance(other, Position):
+            return self.symbol == other.symbol and self.sec_type == other.sec_type and self.trade_date == other.trade_date and \
+                self.trade_size == other.trade_size and self.direction == other.direction and self.risk_reward == other.risk_reward and \
+                self.entry == other.entry and self.entry_time == other.entry_time and self.exit == other.exit and self.exit_time == other.exit_time and \
+                self.commission == other.commission and self.pnl == other.pnl and self.pnl_perc == other.pnl_perc and self.time_in_trade == other.time_in_trade and \
+                self.u_chg == other.u_chg
+        return False

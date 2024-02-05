@@ -1,41 +1,52 @@
+from unittest import main, TestCase
 from Position import Position
+from VolumeFrame import VolumeFrame
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from VolumeFrame import VolumeFrame
 from datetime import datetime
 from pytz import timezone
-from time import sleep
 
 
-vf = VolumeFrame(symbol="SPY")
-pos = Position(vf)
+class DatabaseTest(TestCase):
+    def setUp(self) -> None:
+        self.vf = VolumeFrame(symbol="SPY")
+        self.pos = Position(self.vf)
+        self.define_pos()
+        self.engine = create_engine("sqlite:///database_tests.sqlite")
+        self.Session = sessionmaker(bind=self.engine)
 
-pos.trade_date = datetime.now(timezone("US/Eastern")).strftime("%Y%m%d")
-diff = pos.close - pos.open
-pos.direction = 1 if diff > 0 else -1
-pos.entry = pos.close / 100
-pos.entry_time = datetime.now(timezone("US/Eastern"))
-pos.underlying_entry_price = pos.close
-pos.commission += 1.3
-pos.in_position = True
+    def tearDown(self) -> None:
+        session = self.Session()
+        session.query(Position).delete()
+        session.commit()
+        session.close()
+        self.engine.dispose()
 
-pos.calculate_bracket()
+    def test_database_insertion(self):
+        session = self.Session()
+        session.add(self.pos)
+        session.commit()
+        db_insertion = session.query(Position).first()
+        session.close()
 
-pos.underlying_exit_price = pos.close + 1
-pos.exit = (pos.close / 100) + 1
-sleep(10)
-pos.exit_time = datetime.now(timezone("US/Eastern"))
-pos.commission += 0.8
+        self.assertEqual(db_insertion, self.pos)
 
-pos.define_columns()
+    def define_pos(self):
+        self.pos.trade_date = datetime.now(timezone("US/Eastern")).strftime("%Y%m%d")
+        diff = self.pos.close - self.pos.open
+        self.pos.direction = 1 if diff > 0 else -1
+        self.pos.entry = self.pos.close / 100
+        self.pos.entry_time = datetime.now(timezone("US/Eastern"))
+        self.pos.underlying_entry_price = self.pos.close
+        self.pos.commission += 1.3
+        self.pos.in_position = True
+        self.pos.calculate_bracket()
+        self.pos.underlying_exit_price = self.pos.close + 1
+        self.pos.exit = (self.pos.close / 100) + 1
+        self.pos.exit_time = datetime.now(timezone("US/Eastern"))
+        self.pos.commission += 0.8
+        self.pos.define_columns()
 
-print(pos)
 
-engine = create_engine("sqlite:///../TradeLog.sqlite")
-Session = sessionmaker(bind=engine)
-session = Session()
-session.add(pos)
-session.commit()
-
-session.close()
-engine.dispose()
+if __name__ == "__main__":
+    main()

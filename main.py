@@ -57,7 +57,7 @@ def entry_algorithm(frame: VolumeFrame) -> Position:
             pos.expiration = (datetime.strptime(pos.trade_date, "%Y%m%d") + timedelta(days=delta)).strftime("%Y%m%d")
             pos.opt_contract = option(pos.symbol, pos.expiration, pos.strike, 'C' if pos.direction > 0 else 'P')
             try:
-                lmt_price = reqCurrentPrice(frame.CONN_VARS, pos.opt_contract)
+                lmt_price = reqCurrentPrice(frame.CONN_VARS, pos.opt_contract) - 0.2
             except NoSecDef:
                 delta += 1
                 if delta > 7:
@@ -132,6 +132,7 @@ if __name__ == "__main__":
     lv.run()
     exit_algorithm(vf, position)
 
+    position.define_columns()
     engine = create_engine(f"sqlite:///{vf.db_path}")
     Session = sessionmaker(bind=engine)
     session = Session()

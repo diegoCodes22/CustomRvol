@@ -11,6 +11,12 @@ from pytz import timezone
 
 
 def make_order(lmt_price: float, act: str, size: int) -> Order:
+    """
+    :param lmt_price: Buy or sell price
+    :param act: Action to take, BUY or SELL
+    :param size: Amount of contracts to buy or sell
+    :return: Order object
+    """
     order = Order()
     order.orderId = 0
     order.action = act
@@ -23,6 +29,10 @@ def make_order(lmt_price: float, act: str, size: int) -> Order:
 
 
 def entry_algorithm(frame: VolumeFrame) -> Position:
+    """
+    :param frame: VolumeFrame object to access the data and configuration settings
+    :return: Return a Position object with the entry details
+    """
     pos = Position(frame)
     pos.trade_date = datetime.now(timezone("US/Eastern")).strftime("%Y%m%d")
     delta: int = 1
@@ -61,6 +71,11 @@ def entry_algorithm(frame: VolumeFrame) -> Position:
 
 
 def exit_algorithm(frame: VolumeFrame, pos: Position) -> None:
+    """
+    :param frame: VolumeFrame object to access the data and configuration settings
+    :param pos: Position object to add the exit details
+    :return: None
+    """
     lmt_price = reqCurrentPrice(frame.CONN_VARS, pos.opt_contract)
     order = make_order(lmt_price, "SELL", frame.multiplier)
     order.algoStrategy = 'Adaptive'

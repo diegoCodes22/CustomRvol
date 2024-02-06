@@ -8,6 +8,9 @@ Base = declarative_base()
 
 
 class Position(Base):
+    """
+    This class is used to store trade data in a database.
+    """
     __tablename__ = "trade_log"
 
     Tid = Column("tid", Integer, primary_key=True, autoincrement=True)
@@ -28,6 +31,9 @@ class Position(Base):
     U_Chg = Column("U_Chg", Float)
 
     def __init__(self, vf: VolumeFrame):
+        """
+        :param vf: VolumeFrame, used to retrieve symbol, multiplier, and OHLCV and atr data.
+        """
         self.symbol: str = vf.symbol
         self.sec_type: str = "OPT"
         self.multiplier: int = vf.multiplier

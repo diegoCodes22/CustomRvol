@@ -27,6 +27,9 @@ from pytz import timezone
 
 
 class LiveData(EClient, EWrapper):
+    """
+    Class to handle live data from TWS. Used to track when to sell an open position.
+    """
     def __init__(self, frame: VolumeFrame, pos: Position):
         EClient.__init__(self, self)
         self.frame = frame
@@ -56,6 +59,9 @@ class LiveData(EClient, EWrapper):
 
 
 if __name__ == "__main__":
+    """
+    Main function to run the program.
+    """
     vf = VolumeFrame(symbol="SPY")
     position = entry_algorithm(vf)
     if position.in_position is False:

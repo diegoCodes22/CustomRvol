@@ -38,10 +38,7 @@ def entry_algorithm(frame: VolumeFrame) -> Position:
     delta: int = 1
     diff: float = pos.close - pos.open
     pos.direction = 1 if diff > 0 else -1
-    # if pos.volume > frame.avg_vol and abs(diff) > pos.atr and not pos.in_position:
-    # ---PSEUDO TESTING ONLY-------|
-    if pos.direction != 0:  # .    |
-        # -------------------------|
+    if pos.volume > frame.avg_vol and abs(diff) > pos.atr and not pos.in_position:
         strike_calc = pos.atr + pos.atr / 4
         pos.strike = round(pos.close + strike_calc) if pos.direction == 1 else round(pos.close - strike_calc)
         while True:

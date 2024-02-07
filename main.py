@@ -39,12 +39,6 @@ class LiveData(EClient, EWrapper):
         self.reqMktData(orderId, self.frame.contract, "", False, False, [])
 
     def tickPrice(self, reqId: TickerId, tickType: TickType, price: float, attrib: TickAttrib):
-
-        # --------------------- PSEUDO TESTING ONLY -----------------------------------|
-        self.pos.take_profit = round(self.pos.underlying_entry_price - 0.03, 2)  # .   |
-        self.pos.stop_loss = round(self.pos.underlying_entry_price + 0.03, 2)  # .     |
-        # -----------------------------------------------------------------------------|
-
         if price == self.pos.take_profit or price == self.pos.stop_loss:
             self.pos.underlying_exit_price = price
             self.disconnect()

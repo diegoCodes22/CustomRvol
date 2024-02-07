@@ -15,7 +15,7 @@ class VolumeFrame(Config):
     in the constructor, ending in end_date (also specified in constructor).
     avg_vol: Average volume of the latest vol_len bars.
     """
-    def __init__(self, atr_len: int = 14, vol_len: int = 30, **kwargs):
+    def __init__(self, atr_len: int = 14, vol_len: int = 25, **kwargs):
         """
         :param atr_len: Lookback length for Average True Range calculation.
         :param vol_len: Lookback period for average volume calculation.

@@ -77,7 +77,7 @@ class Position(Base):
         self.u_chg = round(
             (abs(self.underlying_entry_price - self.underlying_exit_price) / self.underlying_entry_price) * 100, 1)
 
-        self.time_in_trade = (self.exit_time - self.entry_time).total_seconds() / 60
+        self.time_in_trade = round((self.exit_time - self.entry_time).total_seconds(), 2)
         self.entry_time = self.entry_time.strftime("%H:%M:%S")
         self.exit_time = self.exit_time.strftime("%H:%M:%S")
 
@@ -90,9 +90,9 @@ class Position(Base):
         self.TradeSize = self.trade_size
         self.Direction = self.direction
         self.RiskReward = self.risk_reward
-        self.Entry = self.entry
+        self.Entry = round(self.entry, 2)
         self.EntryTime = self.entry_time
-        self.Exit = self.exit
+        self.Exit = round(self.exit, 2)
         self.ExitTime = self.exit_time
         self.Commission = self.commission
         self.Pnl = self.pnl

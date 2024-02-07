@@ -6,6 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from TWSIBAPI_MODULES.exceptions_handler import exceptions_factory
+from TWSIBAPI_MODULES.utils import mkt_is_open, sleep_one_bar
 
 from VolumeFrame import VolumeFrame
 from Position import Position
@@ -16,14 +17,12 @@ from time import sleep
 from pytz import timezone
 
 
-# Must calculate the amount of bars passed, and I must update after every bar.
-# 0.4243 to reqHistData for 2 bars
-
-# Make it so you can use a trailing stop.
-# Option to add a trend filter
-
-# 2.38s on avg until entry
-# Creating frame and running entry algo
+def log_trade(database_path: str, pos: Position):
+    engine = create_engine(f"sqlite:///{database_path}")
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    session.add(pos)
+    session.commit()
 
 
 class LiveData(EClient, EWrapper):
@@ -40,14 +39,13 @@ class LiveData(EClient, EWrapper):
         self.reqMktData(orderId, self.frame.contract, "", False, False, [])
 
     def tickPrice(self, reqId: TickerId, tickType: TickType, price: float, attrib: TickAttrib):
-        ct = datetime.now(timezone("US/Eastern")).strftime("%H:%M")
 
         # --------------------- PSEUDO TESTING ONLY -----------------------------------|
-        self.pos.take_profit = round(self.pos.underlying_entry_price - 0.03, 2)  # |
-        self.pos.stop_loss = round(self.pos.underlying_entry_price + 0.03, 2)  # |
+        self.pos.take_profit = round(self.pos.underlying_entry_price - 0.03, 2)  # .   |
+        self.pos.stop_loss = round(self.pos.underlying_entry_price + 0.03, 2)  # .     |
         # -----------------------------------------------------------------------------|
 
-        if price == self.pos.take_profit or price == self.pos.stop_loss or ct == "15:30":
+        if price == self.pos.take_profit or price == self.pos.stop_loss:
             self.pos.underlying_exit_price = price
             self.disconnect()
         else:
@@ -62,20 +60,18 @@ if __name__ == "__main__":
     """
     Main function to run the program.
     """
-    vf = VolumeFrame(symbol="SPY")
-    position = entry_algorithm(vf)
-    if position.in_position is False:
-        print("No trade was taken, Exiting...")
-        exit(0)
-    position.calculate_bracket()
-    lv = LiveData(vf, position)
-    lv.connect(vf.CONN_VARS[0], vf.CONN_VARS[1], vf.CONN_VARS[2])
-    lv.run()
-    exit_algorithm(vf, position)
+    while mkt_is_open() and datetime.now(timezone("US/Eastern")).strftime("%H:%M") < "15:30":
+        vf = VolumeFrame()
+        position = entry_algorithm(vf)
+        if position.in_position:
+            position.calculate_bracket()
+            lv = LiveData(vf, position)
+            lv.connect(vf.CONN_VARS[0], vf.CONN_VARS[1], vf.CONN_VARS[2])
+            lv.run()
+            exit_algorithm(vf, position)
+            position.define_columns()
+            log_trade(vf.db_path, position)
+        else:
+            print("No trade was taken.")
+        sleep_one_bar(vf.bar_size)
 
-    position.define_columns()
-    engine = create_engine(f"sqlite:///{vf.db_path}")
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    session.add(position)
-    session.commit()
